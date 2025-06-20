@@ -9,18 +9,32 @@
   <style>
     body {
       font-family: sans-serif;
-      background: var(--tg-theme-bg-color, #f0f0f0);
+      background: var(--tg-theme-bg-color, #f5f5f5);
       color: var(--tg-theme-text-color, #000);
       margin: 0;
-      padding: 1rem;
+      padding: 0;
     }
-    .container {
-      max-width: 700px;
-      margin: auto;
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      background: var(--tg-theme-secondary-bg-color, #fff);
+      padding: 0.5rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    .tab.active {
+      font-weight: bold;
+      border-bottom: 2px solid var(--tg-theme-button-color, #2a85ff);
+    }
+    .content {
+      padding: 1rem;
     }
     input, select {
       width: 100%;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.6rem;
       padding: 0.5rem;
       font-size: 1rem;
       border: 1px solid #ccc;
@@ -33,57 +47,59 @@
       color: var(--tg-theme-button-text-color, #fff);
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 0.4rem;
-      margin-right: 0.4rem;
+      margin: 0.3rem 0.3rem 0.8rem 0;
     }
     .card {
       background: var(--tg-theme-secondary-bg-color, #fff);
       padding: 1rem;
       margin: 1rem 0;
       border-radius: 10px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
     }
     canvas {
       width: 100% !important;
-      max-height: 180px;
-      margin-top: 0.5rem;
+      max-height: 160px;
+      margin-top: 1rem;
     }
-    .filters {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin: 1rem 0;
+    #filters {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>P2P сделки</h2>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('main')">📄 Сделки</div>
+    <div class="tab" onclick="switchTab('filters')">🔍 Фильтры</div>
+  </div>
 
-    <label>Тип сделки</label>
+  <div class="content" id="main">
+    <h2>P2P Сделка</h2>
+
     <select id="type">
       <option value="buy">Покупка</option>
       <option value="sell">Продажа</option>
     </select>
 
     <input id="amount" type="number" placeholder="Сумма ₽">
-    <input id="currency" type="text" placeholder="Валюта (например, USDT)">
+    <input id="currency" type="text" placeholder="Валюта">
     <input id="price" type="number" placeholder="Цена ₽">
-    <input id="note" type="text" placeholder="Примечание (например, Binance)">
-    <button onclick="startVoice()">🎙 Говорить</button>
+    <input id="note" type="text" placeholder="Примечание">
+
     <button onclick="aiNote()">AI-подсказка</button>
     <button onclick="addDeal()">Добавить сделку</button>
 
     <label>Круг (для продажи)</label>
     <select id="circleSelect"></select>
 
-    <div class="filters">
-      <input type="text" id="filterCurrency" placeholder="Фильтр: Валюта">
-      <input type="number" id="filterMinPrice" placeholder="Мин. цена">
-      <input type="number" id="filterMaxPrice" placeholder="Макс. цена">
-    </div>
-
     <div id="circles"></div>
+  </div>
+
+  <div class="content" id="filters">
+    <h3>Фильтры сделок</h3>
+    <input type="text" id="filterCurrency" placeholder="Валюта (например, USDT)">
+    <input type="number" id="filterMinPrice" placeholder="Мин. цена">
+    <input type="number" id="filterMaxPrice" placeholder="Макс. цена">
+    <button onclick="renderUI()">Применить</button>
   </div>
 
   <script>
@@ -92,6 +108,13 @@
     const userId = Telegram.WebApp.initDataUnsafe?.user?.id;
 
     let circles = [];
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.style.display = 'none');
+      document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+      document.getElementById(tab).style.display = 'block';
+    }
 
     async function loadCircles() {
       const res = await fetch(`${API}/circles?user_id=${userId}`);
@@ -111,43 +134,44 @@
 
       circles.forEach((c, i) => {
         const sold = parseFloat(c.buyAmount) - parseFloat(c.remaining);
-        const revenue = c.sells.reduce((sum, s) => sum + (s.amount * s.price), 0);
+        const revenue = c.sells.reduce((sum, s) => sum + s.amount * s.price, 0);
         const pnl = revenue - c.buyAmount;
-        const percent = (sold / c.buyAmount) * 100;
-
-        // фильтрация
-        const filteredSells = c.sells.filter(s =>
-          s.currency.toLowerCase().includes(fCurrency) &&
-          s.price >= minP && s.price <= maxP
-        );
 
         const opt = document.createElement("option");
         opt.value = i;
         opt.text = `Круг #${i + 1}`;
         select.appendChild(opt);
 
+        const filteredSells = c.sells.filter(s =>
+          s.currency.toLowerCase().includes(fCurrency) &&
+          s.price >= minP && s.price <= maxP
+        );
+
         const div = document.createElement("div");
         div.className = "card";
         div.innerHTML = `
           <h3>Круг #${i + 1}</h3>
-          <p>Покупка: ${c.buyAmount}₽ | Продано: ${sold.toFixed(2)}₽</p>
-          <p>Выручка: ${revenue.toFixed(2)}₽ | PnL: ${pnl.toFixed(2)}₽ (${(pnl / c.buyAmount * 100).toFixed(1)}%)</p>
+          <p>Куплено: ${c.buyAmount}₽ / Продано: ${sold.toFixed(2)}₽</p>
+          <p>Выручка: ${revenue.toFixed(2)}₽ / PnL: ${pnl.toFixed(2)}₽</p>
           <p>Статус: ${c.closed ? "✅ Закрыт" : "🕓 Открыт"}</p>
-          <button onclick="deleteCircle(${c.id})">Удалить круг</button>
+          <button onclick="deleteCircle(${c.id})">Удалить</button>
           <ul>
-            ${filteredSells.map(s => `<li>${s.amount}₽ ${s.currency} по ${s.price}₽ — ${s.note}
-              <button onclick="editSell(${s.id}, ${c.id})">✏️</button></li>`).join("")}
+            ${filteredSells.map(s => `
+              <li>${s.amount}₽ ${s.currency} по ${s.price}₽ — ${s.note}
+              <button onclick="editSell(${s.id}, ${c.id})">✏️</button>
+              </li>
+            `).join("")}
           </ul>
           <canvas id="chart_${c.id}"></canvas>
         `;
         list.appendChild(div);
 
-        // Chart.js — график
+        // График
         const ctx = document.getElementById(`chart_${c.id}`).getContext('2d');
         new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: c.sells.map((s, idx) => `#${idx + 1}`),
+            labels: c.sells.map((s, i) => `#${i + 1}`),
             datasets: [{
               label: "₽",
               data: c.sells.map(s => s.amount * s.price),
@@ -170,6 +194,11 @@
       const price = +document.getElementById("price").value;
       const note = document.getElementById("note").value;
 
+      if (!amount || !currency || !price) {
+        alert("Заполните все поля сделки");
+        return;
+      }
+
       if (type === "buy") {
         await fetch(`${API}/circles`, {
           method: "POST",
@@ -178,12 +207,15 @@
         });
       } else {
         const circle = circles[document.getElementById("circleSelect").value];
+        if (!circle) return alert("Круг не выбран");
         await fetch(`${API}/circles/${circle.id}/sells`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount, currency, price, note, user_id: userId })
         });
       }
+
+      ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
       await loadCircles();
     }
 
@@ -212,6 +244,7 @@
     async function aiNote() {
       const currency = document.getElementById("currency").value;
       const price = document.getElementById("price").value;
+      if (!currency || !price) return alert("Укажите валюту и цену");
       const res = await fetch(`${API}/note/ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,19 +254,6 @@
       document.getElementById("note").value = data.note;
     }
 
-    function startVoice() {
-      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        return alert("Браузер не поддерживает распознавание речи");
-      }
-      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      rec.lang = 'ru-RU';
-      rec.start();
-      rec.onresult = function(e) {
-        document.getElementById("note").value = e.results[0][0].transcript;
-      };
-    }
-
-    document.querySelectorAll('.filters input').forEach(i => i.addEventListener("input", renderUI));
     loadCircles();
   </script>
 </body>
