@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P2P-сделки</title>
+  <title>P2P Сделки</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: var(--tg-theme-bg-color, #f9f9f9);
+      background: var(--tg-theme-bg-color, #f1f1f1);
       color: var(--tg-theme-text-color, #000);
       margin: 0;
       padding: 1rem;
@@ -16,10 +16,6 @@
     .container {
       max-width: 600px;
       margin: auto;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 1rem;
     }
     input, select {
       width: 100%;
@@ -36,8 +32,7 @@
       background: var(--tg-theme-button-color, #2a85ff);
       color: var(--tg-theme-button-text-color, #fff);
       cursor: pointer;
-      margin-right: 0.5rem;
-      margin-top: 0.3rem;
+      margin: 0.3rem 0.5rem 0.3rem 0;
     }
     .card {
       background: var(--tg-theme-secondary-bg-color, #fff);
@@ -47,7 +42,7 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     }
     .progress {
-      height: 12px;
+      height: 10px;
       background: #eee;
       border-radius: 6px;
       overflow: hidden;
@@ -56,17 +51,13 @@
     .progress-inner {
       height: 100%;
       background: #4caf50;
-      width: 0%;
       transition: width 0.3s ease;
-    }
-    .actions button {
-      margin-right: 0.5rem;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>P2P-сделки</h1>
+    <h2>P2P Сделки</h2>
 
     <label>Тип</label>
     <select id="type">
@@ -75,13 +66,13 @@
     </select>
 
     <label>Сумма</label>
-    <input id="amount" type="number" placeholder="Введите сумму ₽">
+    <input id="amount" type="number" placeholder="₽">
 
     <label>Валюта</label>
     <input id="currency" type="text" placeholder="USDT">
 
     <label>Цена</label>
-    <input id="price" type="number" placeholder="Введите цену ₽">
+    <input id="price" type="number" placeholder="₽">
 
     <label>Примечание</label>
     <input id="note" type="text" placeholder="Комментарий">
@@ -89,10 +80,8 @@
     <label>Круг (для продажи)</label>
     <select id="circleSelect"></select>
 
-    <div class="actions">
-      <button onclick="suggestNote()">AI-подсказка</button>
-      <button onclick="addDeal()">Добавить сделку</button>
-    </div>
+    <button onclick="suggestNote()">AI-подсказка</button>
+    <button onclick="addDeal()">Добавить сделку</button>
 
     <div id="circles"></div>
   </div>
@@ -107,10 +96,10 @@
     async function loadCircles() {
       const res = await fetch(`${API}/circles?user_id=${userId}`);
       circles = await res.json();
-      updateUI();
+      renderUI();
     }
 
-    function updateUI() {
+    function renderUI() {
       const select = document.getElementById("circleSelect");
       select.innerHTML = "";
       const list = document.getElementById("circles");
@@ -122,19 +111,21 @@
 
         const opt = document.createElement("option");
         opt.value = i;
-        opt.text = `Круг #${i+1} (${c.closed ? 'Закрыт' : 'Открыт'})`;
+        opt.text = `Круг #${i + 1} (${c.closed ? 'Закрыт' : 'Открыт'})`;
         select.appendChild(opt);
 
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
-          <h3>Круг #${i+1}</h3>
-          <p>Покупка: ${c.buyAmount} ₽</p>
-          <p>Продано: ${sold.toFixed(2)} ₽</p>
+          <h3>Круг #${i + 1}</h3>
+          <p>Покупка: ${c.buyAmount}₽ | Продано: ${sold.toFixed(2)}₽</p>
           <div class="progress"><div class="progress-inner" style="width:${percent}%"></div></div>
           <p>Статус: ${c.closed ? '✅ Закрыт' : '🕓 В процессе'}</p>
           <button onclick="deleteCircle(${c.id})">Удалить</button>
-          <ul>${c.sells.map(s => `<li>${s.amount}₽ — ${s.currency} по ${s.price}₽ (${s.note})</li>`).join("")}</ul>
+          <ul>${c.sells.map(s => `
+            <li>${s.amount}₽ ${s.currency} по ${s.price}₽ (${s.note})
+              <button onclick="editSell(${s.id}, ${c.id})">✏️</button>
+            </li>`).join("")}</ul>
         `;
         list.appendChild(card);
       });
@@ -148,7 +139,7 @@
       const note = document.getElementById("note").value;
 
       if (type === "buy") {
-        const res = await fetch(`${API}/circles`, {
+        await fetch(`${API}/circles`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ buyAmount: amount, user_id: userId })
@@ -178,6 +169,27 @@
       const currency = document.getElementById("currency").value;
       const price = document.getElementById("price").value;
       document.getElementById("note").value = `Сделка в ${currency}, ${price}`;
+    }
+
+    async function editSell(sellId, circleId) {
+      const circle = circles.find(c => c.id === circleId);
+      const sell = circle.sells.find(s => s.id === sellId);
+      if (!sell) return;
+
+      const amount = prompt("Сумма", sell.amount);
+      const currency = prompt("Валюта", sell.currency);
+      const price = prompt("Цена", sell.price);
+      const note = prompt("Примечание", sell.note);
+
+      if (!amount || !currency || !price) return;
+
+      await fetch(`${API}/sells/${sellId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, currency, price, note, user_id: userId })
+      });
+
+      await loadCircles();
     }
 
     loadCircles();
