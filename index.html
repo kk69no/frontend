@@ -11,27 +11,23 @@
       margin: 0;
       padding: 1rem;
     }
-
     .container {
       max-width: 600px;
       margin: auto;
-      background: white;
+      background: #ffffff;
       padding: 1.5rem;
       border-radius: 12px;
       box-shadow: 0 5px 20px rgba(0,0,0,0.05);
     }
-
     h1 {
       text-align: center;
       margin-bottom: 1.5rem;
     }
-
     label {
       display: block;
       margin-top: 1rem;
       margin-bottom: 0.3rem;
     }
-
     input, select, button {
       width: 100%;
       padding: 0.7rem;
@@ -40,56 +36,46 @@
       border-radius: 8px;
       margin-bottom: 1rem;
       box-sizing: border-box;
+      background: #fff;
     }
-
     button {
       background-color: #4a90e2;
       color: white;
       border: none;
       cursor: pointer;
+      transition: transform 0.1s ease, background-color 0.2s ease;
     }
-
     button:hover {
       background-color: #357ab8;
     }
-
+    button:active {
+      transform: scale(0.97);
+    }
     .actions {
       display: flex;
       gap: 0.5rem;
     }
-
     .actions button {
       flex: 1;
     }
-
     .quick-buttons button {
       margin-right: 0.3rem;
       margin-bottom: 0.5rem;
       width: auto;
       padding: 0.5rem 1rem;
     }
-
-    .circle-actions {
-      margin-top: 0.5rem;
-      display: flex;
-      gap: 0.3rem;
-    }
-
     .analytics {
       margin-top: 2rem;
       padding-top: 1rem;
       border-top: 1px solid #ddd;
     }
-
     .analytics h3 {
       margin-top: 0;
     }
-
     @media (max-width: 480px) {
       h1 {
         font-size: 1.5rem;
       }
-
       input, select, button {
         font-size: 0.95rem;
       }
@@ -98,7 +84,7 @@
 </head>
 <body>
   <div class="container">
-   <h1>P2P-сделка</h1>
+    <h1>P2P-сделка</h1>
 
     <label for="circleSelect">Выбрать круг</label>
     <select id="circleSelect"></select>
@@ -144,10 +130,14 @@
 
     async function fetchCircles() {
       const res = await fetch('/circles');
-      circles = await res.json();
-      updateCircleSelect();
-      updateCirclesUI();
-      updateAnalytics();
+      if (res.ok) {
+        circles = await res.json();
+        updateCircleSelect();
+        updateCirclesUI();
+        updateAnalytics();
+      } else {
+        console.error("Не удалось получить круги");
+      }
     }
 
     function adjustAmount(val) {
@@ -155,7 +145,15 @@
       input.value = parseFloat(input.value || 0) + val;
     }
 
-    document.getElementById("suggestNote").addEventListener("click", () => { /* без изменений */ });
+    document.getElementById("suggestNote").addEventListener("click", async () => {
+      try {
+        const res = await fetch('/quote');
+        const data = await res.json();
+        document.getElementById("note").value = data.quote || "";
+      } catch (err) {
+        alert("Не удалось получить цитату");
+      }
+    });
 
     document.getElementById("addDeal").addEventListener("click", async () => {
       const type = document.getElementById("type").value;
@@ -163,6 +161,7 @@
       const currency = document.getElementById("currency").value;
       const price = +document.getElementById("price").value;
       const note = document.getElementById("note").value;
+
       if (!amount || !currency || !price) return alert("Заполните поля");
 
       if (type === "buy") {
@@ -181,6 +180,7 @@
           body: JSON.stringify({ amount, currency, price, note })
         });
       }
+
       clearInputs();
       await fetchCircles();
     });
@@ -249,10 +249,19 @@
     }
 
     function startVoiceInput() {
-      if (!('webkitSpeechRecognition' in window)) return alert("Не поддерживается");
-      const rec = new webkitSpeechRecognition();
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Голосовой ввод не поддерживается этим браузером");
+        return;
+      }
+      const rec = new SpeechRecognition();
       rec.lang = "ru-RU";
-      rec.onresult = e => document.getElementById("note").value = e.results[0][0].transcript;
+      rec.onresult = event => {
+        document.getElementById("note").value = event.results[0][0].transcript;
+      };
+      rec.onerror = event => {
+        alert("Ошибка распознавания голоса: " + event.error);
+      };
       rec.start();
     }
 
