@@ -188,36 +188,48 @@
     }
 
     async function addDeal() {
-      const type = document.getElementById("type").value;
-      const amount = +document.getElementById("amount").value;
-      const currency = document.getElementById("currency").value;
-      const price = +document.getElementById("price").value;
-      const note = document.getElementById("note").value;
+  const type = document.getElementById("type").value;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const currency = document.getElementById("currency").value.trim();
+  const price = parseFloat(document.getElementById("price").value);
+  const note = document.getElementById("note").value.trim();
 
-      if (!amount || !currency || !price) {
-        alert("Заполните все поля сделки");
-        return;
-      }
+  if (!amount || !currency || !price || isNaN(amount) || isNaN(price)) {
+    alert("Пожалуйста, заполните сумму, валюту и цену сделки.");
+    return;
+  }
 
-      if (type === "buy") {
-        await fetch(`${API}/circles`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ buyAmount: amount, user_id: userId })
-        });
-      } else {
-        const circle = circles[document.getElementById("circleSelect").value];
-        if (!circle) return alert("Круг не выбран");
-        await fetch(`${API}/circles/${circle.id}/sells`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount, currency, price, note, user_id: userId })
-        });
-      }
-
-      ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
-      await loadCircles();
+  if (type === "buy") {
+    await fetch(`${API}/circles`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ buyAmount: amount, user_id: userId })
+    });
+  } else {
+    const select = document.getElementById("circleSelect");
+    const selectedIndex = select.selectedIndex;
+    if (selectedIndex < 0 || !circles[selectedIndex]) {
+      alert("Выберите действующий круг");
+      return;
     }
+    const circle = circles[selectedIndex];
+    if (circle.closed) {
+      alert("Этот круг уже закрыт");
+      return;
+    }
+
+    await fetch(`${API}/circles/${circle.id}/sells`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, currency, price, note, user_id: userId })
+    });
+  }
+
+  // Очистка
+  ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
+  await loadCircles();
+}
+
 
     async function deleteCircle(id) {
       if (!confirm("Удалить круг?")) return;
