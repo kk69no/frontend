@@ -130,7 +130,7 @@
     let circles = [];
 
     async function fetchCircles() {
-      const res = await fetch('/circles');
+      const res = await fetch(`${API_BASE}/circles`);
       if (res.ok) {
         circles = await res.json();
         updateCircleSelect();
@@ -166,11 +166,12 @@
       if (!amount || !currency || !price) return alert("Заполните поля");
 
       if (type === "buy") {
-        await fetch('/circles', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ buyAmount: amount })
-        });
+        await fetch(`${API_BASE}/circles`, {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({ buyAmount: amount })
+});
+
       } else {
         const sel = document.getElementById("circleSelect");
         const circ = circles[sel.value];
