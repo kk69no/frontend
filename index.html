@@ -138,6 +138,8 @@
     // Telegram WebApp initialization
     Telegram.WebApp.ready();
     const userId = Telegram.WebApp.initDataUnsafe.user.id;
+    await fetch(`${API_BASE}/circles?user_id=${userId}`);
+
     const storageKey = 'p2pCircles_' + userId;
     let circles = JSON.parse(localStorage.getItem(storageKey)) || [];
 
