@@ -198,8 +198,10 @@
       const cont = document.getElementById("circles");
       cont.innerHTML = "";
       circles.forEach((c, i) => {
-        const sold = c.buyAmount - c.remaining;
-        const pct = sold / c.buyAmount * 100;
+        const buyAmount = parseFloat(c.buyAmount);
+        const remaining = parseFloat(c.remaining);
+        const sold = buyAmount - remaining;
+        const pct = (sold / buyAmount) * 100;
         const color = pct >= 100 ? 'green' : pct >= 50 ? 'orange' : '#ccc';
         const div = document.createElement("div");
         div.innerHTML = `<strong>Круг #${i+1}</strong><br>
@@ -216,8 +218,8 @@
     }
 
     function updateAnalytics() {
-      const totalBuys = circles.reduce((sum,c)=>sum+c.buyAmount,0);
-      const totalSells = circles.reduce((sum,c)=>sum + (c.buyAmount - c.remaining),0);
+      const totalBuys = circles.reduce((sum,c)=>sum + parseFloat(c.buyAmount), 0);
+      const totalSells = circles.reduce((sum,c)=>sum + (parseFloat(c.buyAmount) - parseFloat(c.remaining)), 0);
       document.getElementById("analytics").innerHTML = `
         <h3>Отчёт</h3>
         <p>Всего кругов: ${circles.length}</p>
