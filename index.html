@@ -167,10 +167,10 @@
 
       if (type === "buy") {
         await fetch(`${API_BASE}/circles`, {
-  method: 'POST',
-  headers: {'Content-Type':'application/json'},
-  body: JSON.stringify({ buyAmount: amount })
-});
+     method: 'POST',
+     headers: {'Content-Type':'application/json'},
+     body: JSON.stringify({ buyAmount: amount })
+       });
 
       } else {
         const sel = document.getElementById("circleSelect");
