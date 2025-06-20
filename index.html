@@ -1,3 +1,5 @@
+<!-- index.fixed.html — готовый к загрузке на Vercel -->
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -131,14 +133,10 @@
 
     async function fetchCircles() {
       const res = await fetch(`${API_BASE}/circles`);
-      if (res.ok) {
-        circles = await res.json();
-        updateCircleSelect();
-        updateCirclesUI();
-        updateAnalytics();
-      } else {
-        console.error("Не удалось получить круги");
-      }
+      circles = await res.json();
+      updateCircleSelect();
+      updateCirclesUI();
+      updateAnalytics();
     }
 
     function adjustAmount(val) {
@@ -146,14 +144,11 @@
       input.value = parseFloat(input.value || 0) + val;
     }
 
-    document.getElementById("suggestNote").addEventListener("click", async () => {
-      try {
-        const res = await fetch('/quote');
-        const data = await res.json();
-        document.getElementById("note").value = data.quote || "";
-      } catch (err) {
-        alert("Не удалось получить цитату");
-      }
+    document.getElementById("suggestNote").addEventListener("click", () => {
+      const currency = document.getElementById("currency").value || "USDT";
+      const price = document.getElementById("price").value || "по рыночной цене";
+      const note = `Сделка в ${currency}, ${price}`;
+      document.getElementById("note").value = note;
     });
 
     document.getElementById("addDeal").addEventListener("click", async () => {
@@ -162,28 +157,24 @@
       const currency = document.getElementById("currency").value;
       const price = +document.getElementById("price").value;
       const note = document.getElementById("note").value;
-
       if (!amount || !currency || !price) return alert("Заполните поля");
 
       if (type === "buy") {
         await fetch(`${API_BASE}/circles`, {
-     method: 'POST',
-     headers: {'Content-Type':'application/json'},
-     body: JSON.stringify({ buyAmount: amount })
-       });
-
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ buyAmount: amount })
+        });
       } else {
         const sel = document.getElementById("circleSelect");
         const circ = circles[sel.value];
         if (!circ || circ.closed) return alert("Выберите активный круг");
         await fetch(`${API_BASE}/circles/${circ.id}/sells`, {
           method: 'POST',
-         headers: {'Content-Type':'application/json'},
-         body: JSON.stringify({ amount, currency, price, note })
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ amount, currency, price, note })
         });
-
       }
-
       clearInputs();
       await fetchCircles();
     });
@@ -216,7 +207,7 @@
           Продано: ${sold.toFixed(2)}₽<br>
           Статус: ${c.closed ? "✅ Закрыт" : "🕓 В процессе"}<br>
           <div style="margin:0.3rem 0">
-            <progress max="${c.buyAmount}" value="${sold}" style="width:100%;accent-color:${color};"></progress>
+            <progress max="${c.buyAmount}" value="${sold}" style="width:100%; accent-color:${color};"></progress>
             <small>${pct.toFixed(1)}%</small>
           </div>
           <ul>${c.sells.map(s=>`<li>${s.amount}₽ — ${s.currency} по ${s.price}₽ (${s.note})</li>`).join('')}</ul>`;
@@ -263,6 +254,7 @@
         document.getElementById("note").value = event.results[0][0].transcript;
       };
       rec.onerror = event => {
+        console.error(event.error);
         alert("Ошибка распознавания голоса: " + event.error);
       };
       rec.start();
