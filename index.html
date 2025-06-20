@@ -3,85 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P2P Сделки</title>
+  <title>P2P сделки</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: var(--tg-theme-bg-color, #f1f1f1);
+      background: var(--tg-theme-bg-color, #f0f0f0);
       color: var(--tg-theme-text-color, #000);
       margin: 0;
       padding: 1rem;
     }
     .container {
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
     }
     input, select {
       width: 100%;
-      margin-bottom: 0.8rem;
-      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 6px;
     }
     button {
-      padding: 0.6rem 1rem;
+      padding: 0.5rem 1rem;
       border: none;
-      border-radius: 6px;
       background: var(--tg-theme-button-color, #2a85ff);
       color: var(--tg-theme-button-text-color, #fff);
+      border-radius: 6px;
       cursor: pointer;
-      margin: 0.3rem 0.5rem 0.3rem 0;
+      margin-top: 0.4rem;
+      margin-right: 0.4rem;
     }
     .card {
       background: var(--tg-theme-secondary-bg-color, #fff);
       padding: 1rem;
+      margin: 1rem 0;
       border-radius: 10px;
-      margin-bottom: 1rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     }
-    .progress {
-      height: 10px;
-      background: #eee;
-      border-radius: 6px;
-      overflow: hidden;
-      margin: 0.5rem 0;
+    canvas {
+      width: 100% !important;
+      max-height: 180px;
+      margin-top: 0.5rem;
     }
-    .progress-inner {
-      height: 100%;
-      background: #4caf50;
-      transition: width 0.3s ease;
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>P2P Сделки</h2>
+    <h2>P2P сделки</h2>
 
-    <label>Тип</label>
+    <label>Тип сделки</label>
     <select id="type">
       <option value="buy">Покупка</option>
       <option value="sell">Продажа</option>
     </select>
 
-    <label>Сумма</label>
-    <input id="amount" type="number" placeholder="₽">
-
-    <label>Валюта</label>
-    <input id="currency" type="text" placeholder="USDT">
-
-    <label>Цена</label>
-    <input id="price" type="number" placeholder="₽">
-
-    <label>Примечание</label>
-    <input id="note" type="text" placeholder="Комментарий">
+    <input id="amount" type="number" placeholder="Сумма ₽">
+    <input id="currency" type="text" placeholder="Валюта (например, USDT)">
+    <input id="price" type="number" placeholder="Цена ₽">
+    <input id="note" type="text" placeholder="Примечание (например, Binance)">
+    <button onclick="startVoice()">🎙 Говорить</button>
+    <button onclick="aiNote()">AI-подсказка</button>
+    <button onclick="addDeal()">Добавить сделку</button>
 
     <label>Круг (для продажи)</label>
     <select id="circleSelect"></select>
 
-    <button onclick="suggestNote()">AI-подсказка</button>
-    <button onclick="addDeal()">Добавить сделку</button>
+    <div class="filters">
+      <input type="text" id="filterCurrency" placeholder="Фильтр: Валюта">
+      <input type="number" id="filterMinPrice" placeholder="Мин. цена">
+      <input type="number" id="filterMaxPrice" placeholder="Макс. цена">
+    </div>
 
     <div id="circles"></div>
   </div>
@@ -100,34 +100,66 @@
     }
 
     function renderUI() {
-      const select = document.getElementById("circleSelect");
-      select.innerHTML = "";
       const list = document.getElementById("circles");
       list.innerHTML = "";
+      const select = document.getElementById("circleSelect");
+      select.innerHTML = "";
+
+      const fCurrency = document.getElementById("filterCurrency").value.toLowerCase();
+      const minP = +document.getElementById("filterMinPrice").value || 0;
+      const maxP = +document.getElementById("filterMaxPrice").value || Infinity;
 
       circles.forEach((c, i) => {
         const sold = parseFloat(c.buyAmount) - parseFloat(c.remaining);
-        const percent = (sold / parseFloat(c.buyAmount)) * 100;
+        const revenue = c.sells.reduce((sum, s) => sum + (s.amount * s.price), 0);
+        const pnl = revenue - c.buyAmount;
+        const percent = (sold / c.buyAmount) * 100;
+
+        // фильтрация
+        const filteredSells = c.sells.filter(s =>
+          s.currency.toLowerCase().includes(fCurrency) &&
+          s.price >= minP && s.price <= maxP
+        );
 
         const opt = document.createElement("option");
         opt.value = i;
-        opt.text = `Круг #${i + 1} (${c.closed ? 'Закрыт' : 'Открыт'})`;
+        opt.text = `Круг #${i + 1}`;
         select.appendChild(opt);
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
           <h3>Круг #${i + 1}</h3>
           <p>Покупка: ${c.buyAmount}₽ | Продано: ${sold.toFixed(2)}₽</p>
-          <div class="progress"><div class="progress-inner" style="width:${percent}%"></div></div>
-          <p>Статус: ${c.closed ? '✅ Закрыт' : '🕓 В процессе'}</p>
-          <button onclick="deleteCircle(${c.id})">Удалить</button>
-          <ul>${c.sells.map(s => `
-            <li>${s.amount}₽ ${s.currency} по ${s.price}₽ (${s.note})
-              <button onclick="editSell(${s.id}, ${c.id})">✏️</button>
-            </li>`).join("")}</ul>
+          <p>Выручка: ${revenue.toFixed(2)}₽ | PnL: ${pnl.toFixed(2)}₽ (${(pnl / c.buyAmount * 100).toFixed(1)}%)</p>
+          <p>Статус: ${c.closed ? "✅ Закрыт" : "🕓 Открыт"}</p>
+          <button onclick="deleteCircle(${c.id})">Удалить круг</button>
+          <ul>
+            ${filteredSells.map(s => `<li>${s.amount}₽ ${s.currency} по ${s.price}₽ — ${s.note}
+              <button onclick="editSell(${s.id}, ${c.id})">✏️</button></li>`).join("")}
+          </ul>
+          <canvas id="chart_${c.id}"></canvas>
         `;
-        list.appendChild(card);
+        list.appendChild(div);
+
+        // Chart.js — график
+        const ctx = document.getElementById(`chart_${c.id}`).getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: c.sells.map((s, idx) => `#${idx + 1}`),
+            datasets: [{
+              label: "₽",
+              data: c.sells.map(s => s.amount * s.price),
+              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
       });
     }
 
@@ -146,16 +178,12 @@
         });
       } else {
         const circle = circles[document.getElementById("circleSelect").value];
-        if (!circle || circle.closed) return alert("Выберите активный круг");
-
         await fetch(`${API}/circles/${circle.id}/sells`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount, currency, price, note, user_id: userId })
         });
       }
-
-      ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
       await loadCircles();
     }
 
@@ -165,33 +193,47 @@
       await loadCircles();
     }
 
-    function suggestNote() {
-      const currency = document.getElementById("currency").value;
-      const price = document.getElementById("price").value;
-      document.getElementById("note").value = `Сделка в ${currency}, ${price}`;
-    }
-
     async function editSell(sellId, circleId) {
       const circle = circles.find(c => c.id === circleId);
       const sell = circle.sells.find(s => s.id === sellId);
-      if (!sell) return;
-
       const amount = prompt("Сумма", sell.amount);
       const currency = prompt("Валюта", sell.currency);
       const price = prompt("Цена", sell.price);
       const note = prompt("Примечание", sell.note);
-
       if (!amount || !currency || !price) return;
-
       await fetch(`${API}/sells/${sellId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount, currency, price, note, user_id: userId })
       });
-
       await loadCircles();
     }
 
+    async function aiNote() {
+      const currency = document.getElementById("currency").value;
+      const price = document.getElementById("price").value;
+      const res = await fetch(`${API}/note/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency, price })
+      });
+      const data = await res.json();
+      document.getElementById("note").value = data.note;
+    }
+
+    function startVoice() {
+      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        return alert("Браузер не поддерживает распознавание речи");
+      }
+      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      rec.lang = 'ru-RU';
+      rec.start();
+      rec.onresult = function(e) {
+        document.getElementById("note").value = e.results[0][0].transcript;
+      };
+    }
+
+    document.querySelectorAll('.filters input').forEach(i => i.addEventListener("input", renderUI));
     loadCircles();
   </script>
 </body>
