@@ -1,60 +1,100 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>P2P Counter</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>P2P-сделка</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f4f8;
+      background-color: #f1f3f7;
       margin: 0;
       padding: 1rem;
     }
     .container {
-      max-width: 650px;
+      max-width: 600px;
       margin: auto;
       background: white;
       padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      border-radius: 14px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      display: block;
+    }
+    input, select {
+      display: block;
+      width: 100%;
+      padding: 0.7rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    .quick-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .quick-buttons button {
+      flex: 1;
+      padding: 0.6rem;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .actions button {
+      flex: 1;
+      padding: 0.8rem;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #357ab8;
+    }
+    #circles {
+      margin-top: 2rem;
     }
     .circle-card {
-      background: #fafafa;
+      background: #f9f9f9;
       padding: 1rem;
       border: 1px solid #ddd;
-      border-radius: 12px;
+      border-radius: 10px;
       margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      position: relative;
-    }
-    .circle-card h3 {
-      margin: 0 0 0.5rem;
-    }
-    .circle-card button {
-      margin-top: 0.5rem;
-      margin-right: 0.5rem;
     }
     .progress-bar {
-      height: 14px;
-      border-radius: 8px;
-      overflow: hidden;
+      height: 10px;
       background: #eee;
+      border-radius: 5px;
+      overflow: hidden;
       margin: 0.5rem 0;
     }
     .progress-bar-inner {
       height: 100%;
-      background-color: #4caf50;
-      transition: width 0.2s ease;
-    }
-    .btn-small {
-      padding: 0.4rem 0.7rem;
-      font-size: 0.9rem;
+      background: #4caf50;
+      transition: width 0.3s ease;
     }
     .analytics {
       margin-top: 2rem;
-      padding-top: 1rem;
       border-top: 1px solid #ccc;
+      padding-top: 1rem;
     }
   </style>
 </head>
@@ -96,120 +136,5 @@
     <div id="circles"></div>
     <div class="analytics" id="analytics"></div>
   </div>
-
-<script>
-const API_BASE = "https://backend-2wm0.onrender.com";
-let userId = null;
-let circles = [];
-
-window.Telegram.WebApp.ready();
-userId = Telegram.WebApp.initDataUnsafe?.user?.id || 0;
-
-async function fetchCircles() {
-  const res = await fetch(`${API_BASE}/circles?user_id=${userId}`);
-  circles = await res.json();
-  updateCircleSelect();
-  updateCirclesUI();
-  updateAnalytics();
-}
-
-function updateCircleSelect() {
-  const sel = document.getElementById("circleSelect");
-  sel.innerHTML = "";
-  circles.forEach((c, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = `Круг #${i+1} (${c.closed ? 'Закрыт' : 'Открыт'})`;
-    sel.appendChild(opt);
-  });
-}
-
-function updateCirclesUI() {
-  const cont = document.getElementById("circles");
-  cont.innerHTML = "";
-  circles.forEach((c, i) => {
-    const buy = parseFloat(c.buyAmount);
-    const rem = parseFloat(c.remaining);
-    const sold = buy - rem;
-    const pct = (sold / buy) * 100;
-
-    const card = document.createElement("div");
-    card.className = "circle-card";
-    card.innerHTML = `
-      <h3>Круг #${i+1}</h3>
-      <div>Покупка: ${buy}₽</div>
-      <div>Продано: ${sold.toFixed(2)}₽</div>
-      <div>Статус: ${c.closed ? '✅ Закрыт' : '🕓 В процессе'}</div>
-      <div class="progress-bar">
-        <div class="progress-bar-inner" style="width: ${pct}%"></div>
-      </div>
-      <ul>${c.sells.map(s => `<li>${s.amount}₽ — ${s.currency} по ${s.price}₽ (${s.note})</li>`).join('')}</ul>
-      <button class="btn-small" onclick="deleteCircle(${c.id})">Удалить</button>
-    `;
-    cont.appendChild(card);
-  });
-}
-
-async function deleteCircle(id) {
-  if (confirm("Удалить этот круг?")) {
-    await fetch(`${API_BASE}/circles/${id}?user_id=${userId}`, { method: 'DELETE' });
-    await fetchCircles();
-  }
-}
-
-function updateAnalytics() {
-  const totalBuys = circles.reduce((sum, c) => sum + parseFloat(c.buyAmount), 0);
-  const totalSells = circles.reduce((sum, c) => sum + (parseFloat(c.buyAmount) - parseFloat(c.remaining)), 0);
-  document.getElementById("analytics").innerHTML = `
-    <h3>Отчёт</h3>
-    <p>Всего кругов: ${circles.length}</p>
-    <p>Общая сумма покупок: ${totalBuys.toFixed(2)}₽</p>
-    <p>Общая сумма продаж: ${totalSells.toFixed(2)}₽</p>
-    <p>Открытые круги: ${circles.filter(c=>!c.closed).length}</p>
-    <p>Закрытые круги: ${circles.filter(c=>c.closed).length}</p>`;
-}
-
-function adjustAmount(val) {
-  const input = document.getElementById("amount");
-  input.value = parseFloat(input.value || 0) + val;
-}
-
-document.getElementById("suggestNote").addEventListener("click", () => {
-  const currency = document.getElementById("currency").value || "USDT";
-  const price = document.getElementById("price").value || "100";
-  document.getElementById("note").value = `Сделка в ${currency}, ${price}`;
-});
-
-document.getElementById("addDeal").addEventListener("click", async () => {
-  const type = document.getElementById("type").value;
-  const amount = +document.getElementById("amount").value;
-  const currency = document.getElementById("currency").value;
-  const price = +document.getElementById("price").value;
-  const note = document.getElementById("note").value;
-
-  if (!amount || !currency || !price) return alert("Заполните все поля");
-
-  if (type === "buy") {
-    await fetch(`${API_BASE}/circles`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ buyAmount: amount, user_id: userId })
-    });
-  } else {
-    const c = circles[document.getElementById("circleSelect").value];
-    if (!c || c.closed) return alert("Выберите активный круг");
-    await fetch(`${API_BASE}/circles/${c.id}/sells`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ amount, currency, price, note, user_id: userId })
-    });
-  }
-
-  ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
-  await fetchCircles();
-});
-
-window.addEventListener("DOMContentLoaded", fetchCircles);
-</script>
 </body>
 </html>
