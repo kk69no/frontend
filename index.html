@@ -3,6 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  Telegram.WebApp.ready();
+
+  // Пример: получить имя пользователя
+  console.log('User:', Telegram.WebApp.initDataUnsafe.user);
+
+  // Можно закрыть Web App
+  // Telegram.WebApp.close();
+</script>
+
   <title>P2P Counter</title>
   <style>
     body {
