@@ -272,18 +272,20 @@
       await loadCircles();
     }
 
-    async function aiNote() {
-      const currency = document.getElementById("currency").value;
-      const price = document.getElementById("price").value;
-      if (!currency || !price) return alert("Укажите валюту и цену");
-      const res = await fetch(`${API}/note/ai`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency, price })
-      });
-      const data = await res.json();
-      document.getElementById("note").value = data.note;
-    }
+function aiNote() {
+  const currency = document.getElementById("currency").value.trim();
+  const price = document.getElementById("price").value.trim();
+
+  if (!currency || !price) {
+    alert("Укажите валюту и цену для заметки");
+    return;
+  }
+
+  // Локальная генерация заметки
+  const note = `Продажа ${currency} по ${price}₽ — выгодный курс`;
+  document.getElementById("note").value = note;
+}
+
 
     loadCircles();
   </script>
