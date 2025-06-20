@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>P2P Counter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 0.7rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #357ab8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .actions button {
+      flex: 1;
+    }
+
+    .quick-buttons button {
+      margin-right: 0.3rem;
+      margin-bottom: 0.5rem;
+      width: auto;
+      padding: 0.5rem 1rem;
+    }
+
+    .circle-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .analytics {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ddd;
+    }
+
+    .analytics h3 {
+      margin-top: 0;
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      input, select, button {
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>P2P-сделка</h1>
+
+    <label for="circleSelect">Выбрать круг</label>
+    <select id="circleSelect"></select>
+
+    <label for="type">Тип сделки</label>
+    <select id="type">
+      <option value="buy">Покупка</option>
+      <option value="sell">Продажа</option>
+    </select>
+
+    <label for="amount">Сумма</label>
+    <input type="number" id="amount" placeholder="Введите сумму (₽)" autofocus>
+
+    <div class="quick-buttons">
+      <button onclick="adjustAmount(1)">+1</button>
+      <button onclick="adjustAmount(10)">+10</button>
+      <button onclick="adjustAmount(100)">+100</button>
+    </div>
+
+    <label for="currency">Валюта</label>
+    <input type="text" id="currency" placeholder="Пример: USDT">
+
+    <label for="price">Цена за единицу</label>
+    <input type="number" id="price" placeholder="Введите цену">
+
+    <label for="note">Примечание</label>
+    <input type="text" id="note" placeholder="Например, Bybit / Binance">
+
+    <div class="actions">
+      <button id="suggestNote">AI-подсказка</button>
+      <button id="addDeal">Добавить сделку</button>
+    </div>
+
+    <button onclick="startVoiceInput()">🎤 Голосовой ввод</button>
+    <button onclick="exportCSV()">📤 Экспорт CSV</button>
+
+    <div id="circles"></div>
+    <div class="analytics" id="analytics"></div>
+  </div>
+
+  <script>
+    let circles = [];
+
+    async function fetchCircles() {
+      const res = await fetch('/circles');
+      circles = await res.json();
+      updateCircleSelect();
+      updateCirclesUI();
+      updateAnalytics();
+    }
+
+    function adjustAmount(val) {
+      const input = document.getElementById("amount");
+      input.value = parseFloat(input.value || 0) + val;
+    }
+
+    document.getElementById("suggestNote").addEventListener("click", () => { /* без изменений */ });
+
+    document.getElementById("addDeal").addEventListener("click", async () => {
+      const type = document.getElementById("type").value;
+      const amount = +document.getElementById("amount").value;
+      const currency = document.getElementById("currency").value;
+      const price = +document.getElementById("price").value;
+      const note = document.getElementById("note").value;
+      if (!amount || !currency || !price) return alert("Заполните поля");
+
+      if (type === "buy") {
+        await fetch('/circles', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ buyAmount: amount })
+        });
+      } else {
+        const sel = document.getElementById("circleSelect");
+        const circ = circles[sel.value];
+        if (!circ || circ.closed) return alert("Выберите активный круг");
+        await fetch(`/circles/${circ.id}/sells`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ amount, currency, price, note })
+        });
+      }
+      clearInputs();
+      await fetchCircles();
+    });
+
+    function clearInputs() {
+      ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
+    }
+
+    function updateCircleSelect() {
+      const sel = document.getElementById("circleSelect");
+      sel.innerHTML = "";
+      circles.forEach((c,i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = `Круг #${i+1} (${c.closed ? 'Закрыт' : 'Открыт'})`;
+        sel.add(opt);
+      });
+    }
+
+    function updateCirclesUI() {
+      const cont = document.getElementById("circles");
+      cont.innerHTML = "";
+      circles.forEach((c, i) => {
+        const sold = c.buyAmount - c.remaining;
+        const pct = sold / c.buyAmount * 100;
+        const color = pct >= 100 ? 'green' : pct >= 50 ? 'orange' : '#ccc';
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>Круг #${i+1}</strong><br>
+          Покупка: ${c.buyAmount}₽<br>
+          Продано: ${sold.toFixed(2)}₽<br>
+          Статус: ${c.closed ? "✅ Закрыт" : "🕓 В процессе"}<br>
+          <div style="margin:0.3rem 0">
+            <progress max="${c.buyAmount}" value="${sold}" style="width:100%;accent-color:${color};"></progress>
+            <small>${pct.toFixed(1)}%</small>
+          </div>
+          <ul>${c.sells.map(s=>`<li>${s.amount}₽ — ${s.currency} по ${s.price}₽ (${s.note})</li>`).join('')}</ul>`;
+        cont.appendChild(div);
+      });
+    }
+
+    function updateAnalytics() {
+      const totalBuys = circles.reduce((sum,c)=>sum+c.buyAmount,0);
+      const totalSells = circles.reduce((sum,c)=>sum + (c.buyAmount - c.remaining),0);
+      document.getElementById("analytics").innerHTML = `
+        <h3>Отчёт</h3>
+        <p>Всего кругов: ${circles.length}</p>
+        <p>Общая сумма покупок: ${totalBuys.toFixed(2)}₽</p>
+        <p>Общая сумма продаж: ${totalSells.toFixed(2)}₽</p>
+        <p>Открытые круги: ${circles.filter(c=>!c.closed).length}</p>
+        <p>Закрытые круги: ${circles.filter(c=>c.closed).length}</p>`;
+    }
+
+    function exportCSV() {
+      let csv = "Круг,Тип,Сумма,Валюта,Цена,Примечание\n";
+      circles.forEach((c,i) => {
+        csv += `${i+1},Покупка,${c.buyAmount},,,\n`;
+        c.sells.forEach(s => {
+          csv += `${i+1},Продажа,${s.amount},${s.currency},${s.price},${s.note}\n`;
+        });
+      });
+      const blob = new Blob([csv], {type:"text/csv"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "p2p_circles.csv";
+      a.click();
+    }
+
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window)) return alert("Не поддерживается");
+      const rec = new webkitSpeechRecognition();
+      rec.lang = "ru-RU";
+      rec.onresult = e => document.getElementById("note").value = e.results[0][0].transcript;
+      rec.start();
+    }
+
+    window.addEventListener("DOMContentLoaded", fetchCircles);
+  </script>
+</body>
+</html>
