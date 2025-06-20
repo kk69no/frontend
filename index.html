@@ -187,48 +187,67 @@
       });
     }
 
-    async function addDeal() {
+   async function addDeal() {
   const type = document.getElementById("type").value;
   const amount = parseFloat(document.getElementById("amount").value);
   const currency = document.getElementById("currency").value.trim();
   const price = parseFloat(document.getElementById("price").value);
   const note = document.getElementById("note").value.trim();
 
-  if (!amount || !currency || !price || isNaN(amount) || isNaN(price)) {
-    alert("Пожалуйста, заполните сумму, валюту и цену сделки.");
+  if (!userId) {
+    alert("Ошибка: userId Telegram не получен");
     return;
   }
 
-  if (type === "buy") {
-    await fetch(`${API}/circles`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ buyAmount: amount, user_id: userId })
-    });
-  } else {
-    const select = document.getElementById("circleSelect");
-    const selectedIndex = select.selectedIndex;
-    if (selectedIndex < 0 || !circles[selectedIndex]) {
-      alert("Выберите действующий круг");
-      return;
-    }
-    const circle = circles[selectedIndex];
-    if (circle.closed) {
-      alert("Этот круг уже закрыт");
-      return;
-    }
-
-    await fetch(`${API}/circles/${circle.id}/sells`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, currency, price, note, user_id: userId })
-    });
+  if (!amount || !currency || !price || isNaN(amount) || isNaN(price)) {
+    alert("Заполните сумму, валюту и цену сделки");
+    return;
   }
 
-  // Очистка
-  ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
-  await loadCircles();
+  try {
+    if (type === "buy") {
+      // Создание нового круга
+      const res = await fetch(`${API}/circles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buyAmount: amount, user_id: userId })
+      });
+      if (!res.ok) throw new Error(await res.text());
+    } else {
+      // Добавление сделки в выбранный круг
+      const select = document.getElementById("circleSelect");
+      const selectedIndex = select.selectedIndex;
+      const circle = circles[selectedIndex];
+
+      if (!circle || circle.closed) {
+        alert("Выберите активный круг");
+        return;
+      }
+
+      const res = await fetch(`${API}/circles/${circle.id}/sells`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          currency,
+          price,
+          note,
+          user_id: userId
+        })
+      });
+      if (!res.ok) throw new Error(await res.text());
+    }
+
+    // Очистка
+    ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
+    await loadCircles();
+
+  } catch (err) {
+    alert("Ошибка при добавлении сделки: " + err.message);
+    console.error(err);
+  }
 }
+
 
 
     async function deleteCircle(id) {
