@@ -176,11 +176,12 @@
         const sel = document.getElementById("circleSelect");
         const circ = circles[sel.value];
         if (!circ || circ.closed) return alert("Выберите активный круг");
-        await fetch(`/circles/${circ.id}/sells`, {
+        await fetch(`${API_BASE}/circles/${circ.id}/sells`, {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ amount, currency, price, note })
+         headers: {'Content-Type':'application/json'},
+         body: JSON.stringify({ amount, currency, price, note })
         });
+
       }
 
       clearInputs();
