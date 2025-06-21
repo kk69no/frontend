@@ -34,6 +34,7 @@ document.getElementById('deal-form').onsubmit = async (e) => {
     alert("Заполните все поля");
     return;
   }
+}
 
 if (type === "buy") {
   const res = await fetch(`${API}/circles`, {
