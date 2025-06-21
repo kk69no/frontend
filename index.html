@@ -9,28 +9,35 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <main>
-    <h1>P2P сделки</h1>
+  <div class="app">
+    <div class="tabs">
+      <button class="tab active" data-tab="deals">Сделки</button>
+      <button class="tab" data-tab="analytics">Аналитика</button>
+    </div>
 
-    <form id="deal-form">
-      <select id="type">
-        <option value="buy">Покупка</option>
-        <option value="sell">Продажа</option>
-      </select>
+    <div class="tab-content active" id="deals">
+      <form id="deal-form">
+        <select id="type">
+          <option value="buy">Покупка</option>
+          <option value="sell">Продажа</option>
+        </select>
 
-      <input type="number" id="amount" placeholder="Сумма" required />
-      <input type="text" id="currency" placeholder="Валюта (например, USDT)" />
-      <input type="number" id="price" placeholder="Цена за единицу" step="0.01" />
-      <input type="text" id="note" placeholder="Заметка" />
+        <input type="number" id="amount" placeholder="Сумма" required />
+        <input type="text" id="currency" placeholder="Валюта (например, USDT)" />
+        <input type="number" id="price" placeholder="Цена за единицу" step="0.01" />
+        <input type="text" id="note" placeholder="Заметка" />
 
-      <select id="circleSelect"></select>
-      <button type="submit">Добавить сделку</button>
-    </form>
+        <select id="circleSelect"></select>
+        <button type="submit">Добавить сделку</button>
+      </form>
 
-    <canvas id="mainChart"></canvas>
+      <div class="circle-list" id="circles"></div>
+    </div>
 
-    <section id="circles"></section>
-  </main>
+    <div class="tab-content" id="analytics">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
