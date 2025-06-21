@@ -3,243 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P2P Сделки</title>
+  <title>💱 Telegram P2P Сделки</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: var(--tg-theme-bg-color, #f0f0f0);
-      --text: var(--tg-theme-text-color, #000);
-      --btn: var(--tg-theme-button-color, #2a85ff);
-      --btn-text: var(--tg-theme-button-text-color, #fff);
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #ccc;
-    }
-    .tab {
-      flex: 1;
-      padding: 10px;
-      text-align: center;
-      background: #ddd;
-      cursor: pointer;
-    }
-    .tab.active {
-      background: #bbb;
-      font-weight: bold;
-    }
-    .tab-content {
-      display: none;
-      padding: 1rem;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    input, select {
-      width: 100%;
-      margin: 0.3rem 0;
-      padding: 0.5rem;
-      border-radius: 6px;
-    }
-    button {
-      background: var(--btn);
-      color: var(--btn-text);
-      border: none;
-      padding: 0.5rem 1rem;
-      margin: 0.3rem 0.2rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .card {
-      background: var(--tg-theme-secondary-bg-color, #fff);
-      padding: 1rem;
-      margin: 0.8rem 0;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-  </style>
 </head>
 <body>
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(0)">📄 Сделки</div>
-    <div class="tab" onclick="switchTab(1)">📊 График</div>
-    <div class="tab" onclick="switchTab(2)">🔍 Фильтры</div>
-    <div class="tab" onclick="switchTab(3)">📝 Логи</div>
+  <div class="app">
+    <header>
+      <nav class="tabs">
+        <button class="tab active" data-tab="deals">📄 Сделки</button>
+        <button class="tab" data-tab="chart">📊 График</button>
+        <button class="tab" data-tab="filters">🔍 Фильтры</button>
+        <button class="tab" data-tab="logs">📝 Логи</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Вкладка: Сделки -->
+      <section class="tab-content active" id="tab-deals">
+        <h2>Добавить сделку</h2>
+        <form id="deal-form">
+          <select id="type">
+            <option value="buy">Покупка</option>
+            <option value="sell">Продажа</option>
+          </select>
+
+          <input type="number" id="amount" placeholder="Сумма ₽" />
+          <input type="text" id="currency" placeholder="Валюта (например USDT)" />
+          <input type="number" id="price" placeholder="Цена ₽" />
+          <input type="text" id="note" placeholder="Примечание" />
+
+          <div class="button-group">
+            <button type="button" id="ai-note">🤖 AI-подсказка</button>
+            <button type="submit">➕ Добавить сделку</button>
+          </div>
+        </form>
+
+        <h3>Круг для продажи</h3>
+        <select id="circleSelect"></select>
+
+        <div id="circles" class="circle-list"></div>
+      </section>
+
+      <!-- Вкладка: График -->
+      <section class="tab-content" id="tab-chart">
+        <h2>📈 Аналитика</h2>
+        <canvas id="mainChart" height="200"></canvas>
+      </section>
+
+      <!-- Вкладка: Фильтры -->
+      <section class="tab-content" id="tab-filters">
+        <h2>🔍 Фильтры</h2>
+        <input id="filterCurrency" placeholder="Валюта" />
+        <input id="filterMinPrice" type="number" placeholder="Мин. цена" />
+        <input id="filterMaxPrice" type="number" placeholder="Макс. цена" />
+        <button id="applyFilter">Применить</button>
+      </section>
+
+      <!-- Вкладка: Логи -->
+      <section class="tab-content" id="tab-logs">
+        <h2>📝 История действий</h2>
+        <ul id="logList"></ul>
+      </section>
+    </main>
   </div>
 
-  <div class="tab-content active">
-    <h3>Добавить сделку</h3>
-    <select id="type">
-      <option value="buy">Покупка</option>
-      <option value="sell">Продажа</option>
-    </select>
-    <input id="amount" type="number" placeholder="Сумма ₽" />
-    <input id="currency" placeholder="Валюта (например USDT)" />
-    <input id="price" type="number" placeholder="Цена ₽" />
-    <input id="note" placeholder="Примечание" />
-    <button onclick="generateNote()">AI-подсказка</button>
-    <button onclick="addDeal()">Добавить сделку</button>
-
-    <h4>Круг для продажи</h4>
-    <select id="circleSelect"></select>
-
-    <div id="circles"></div>
-  </div>
-
-  <div class="tab-content">
-    <canvas id="mainChart"></canvas>
-  </div>
-
-  <div class="tab-content">
-    <input id="filterCurrency" placeholder="Фильтр по валюте" />
-    <input id="filterMinPrice" type="number" placeholder="Мин. цена" />
-    <input id="filterMaxPrice" type="number" placeholder="Макс. цена" />
-    <button onclick="render()">Применить фильтр</button>
-  </div>
-
-  <div class="tab-content">
-    <ul id="logList"></ul>
-  </div>
-
-  <script>
-    const API = 'https://backend-2wm0.onrender.com';
-    Telegram.WebApp.ready();
-    const initData = Telegram.WebApp.initData;
-    const userId = Telegram.WebApp.initDataUnsafe?.user?.id;
-    const initDataHeader = { 'x-init-data': initData };
-    let circles = [];
-
-    function switchTab(n) {
-      document.querySelectorAll('.tab').forEach((t, i) =>
-        t.classList.toggle('active', i === n));
-      document.querySelectorAll('.tab-content').forEach((c, i) =>
-        c.classList.toggle('active', i === n));
-    }
-
-    async function load() {
-      const res = await fetch(`${API}/circles`, { headers: initDataHeader });
-      circles = await res.json();
-      render();
-    }
-
-    async function addDeal() {
-      const type = document.getElementById("type").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-      const currency = document.getElementById("currency").value;
-      const price = parseFloat(document.getElementById("price").value);
-      const note = document.getElementById("note").value;
-
-      if (type === "buy") {
-        await fetch(`${API}/circles`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...initDataHeader },
-          body: JSON.stringify({ buyAmount: amount })
-        });
-      } else {
-        const idx = document.getElementById("circleSelect").selectedIndex;
-        const circle = circles[idx];
-        if (!circle) return alert("Выберите круг");
-        await fetch(`${API}/circles/${circle.id}/sells`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...initDataHeader },
-          body: JSON.stringify({ amount, currency, price, note })
-        });
-      }
-
-      ["amount","currency","price","note"].forEach(id => document.getElementById(id).value = "");
-      await load();
-    }
-
-    function render() {
-      const list = document.getElementById("circles");
-      const select = document.getElementById("circleSelect");
-      list.innerHTML = "";
-      select.innerHTML = "";
-
-      circles.forEach((c, i) => {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.innerText = `Круг #${i + 1}`;
-        select.appendChild(opt);
-
-        const total = c.sells.reduce((s, t) => s + t.amount * t.price, 0);
-        const sold = c.buyamount - c.remaining;
-        const pnl = total - c.buyamount;
-        const percent = ((sold / c.buyamount) * 100).toFixed(2);
-
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <b>Круг #${i + 1}</b><br>
-          Куплено: ${c.buyamount}₽<br>
-          Продано: ${sold.toFixed(2)}₽<br>
-          Выручка: ${total.toFixed(2)}₽<br>
-          PnL: ${pnl.toFixed(2)}₽<br>
-          Выполнено: ${percent}%
-          <ul>
-            ${c.sells.map(s => `<li>${s.amount} ${s.currency} по ${s.price}₽ – ${s.note}</li>`).join("")}
-          </ul>
-          <button onclick="deleteCircle(${c.id})">Удалить</button>
-        `;
-        list.appendChild(div);
-      });
-
-      drawChart();
-    }
-
-    async function deleteCircle(id) {
-      await fetch(`${API}/circles/${id}`, {
-        method: "DELETE",
-        headers: initDataHeader
-      });
-      await load();
-    }
-
-    function generateNote() {
-      const currency = document.getElementById("currency").value;
-      const price = document.getElementById("price").value;
-      document.getElementById("note").value = `Продажа ${currency} по ${price}₽ – выгодно`;
-    }
-
-    async function drawChart() {
-      const ctx = document.getElementById('mainChart').getContext('2d');
-      const labels = circles.map((_, i) => `Круг #${i + 1}`);
-      const revenue = circles.map(c =>
-        c.sells.reduce((sum, s) => sum + s.amount * s.price, 0));
-      const pnl = revenue.map((rev, i) => rev - circles[i].buyamount);
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: "Выручка", data: revenue, backgroundColor: "#4caf50" },
-            { label: "Прибыль", data: pnl, backgroundColor: "#2196f3" }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: "bottom" } }
-        }
-      });
-    }
-
-    async function loadLogs() {
-      const res = await fetch(`${API}/logs`, { headers: initDataHeader });
-      const logs = await res.json();
-      const list = document.getElementById("logList");
-      list.innerHTML = logs.map(l => `<li>${l.action} – ${new Date(l.created_at).toLocaleString()}</li>`).join("");
-    }
-
-    load();
-    loadLogs();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
