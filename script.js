@@ -20,7 +20,7 @@ document.getElementById('deal-form').onsubmit = async (e) => {
   const note = document.getElementById("note").value;
 
   if (!amount || (type === "sell" && (!currency || !price))) {
-    return alert("Заполните все поля");
+    return alert("Заполните все поля корректно");
   }
 
   try {
@@ -36,6 +36,12 @@ document.getElementById('deal-form').onsubmit = async (e) => {
       const circle = circles[selected];
       if (!circle) return alert("Нет выбранного круга");
 
+      const sellValue = amount * price;
+      if (sellValue > circle.buyamount * 3) {
+        const confirmResult = confirm("Выручка от сделки в 3 раза превышает купленное — продолжить?");
+        if (!confirmResult) return;
+      }
+
       await fetch(`${API}/circles/${circle.id}/sells`, {
         method: "POST",
         headers: { 'Content-Type': 'application/json', ...userHeaders },
@@ -46,7 +52,7 @@ document.getElementById('deal-form').onsubmit = async (e) => {
     ['amount', 'currency', 'price', 'note'].forEach(id => document.getElementById(id).value = '');
     await loadCircles();
   } catch (e) {
-    alert("Ошибка запроса: " + e.message);
+    alert("Ошибка: " + e.message);
   }
 };
 
@@ -64,21 +70,32 @@ function renderCircles() {
   select.innerHTML = '';
 
   circles.forEach((c, i) => {
-    const sold = c.buyamount - c.remaining;
-    const revenue = c.sells.reduce((s, d) => s + d.amount * d.price, 0);
-    const pnl = revenue - c.buyamount;
-    const percent = ((sold / c.buyamount) * 100).toFixed(1);
+    const bought = parseFloat(c.buyamount);
+    let totalSoldAsset = 0;
+    let totalSellRevenue = 0;
+
+    c.sells.forEach(s => {
+      const amt = parseFloat(s.amount);
+      const pr = parseFloat(s.price);
+      totalSoldAsset += amt;
+      totalSellRevenue += amt * pr;
+    });
+
+    const pnl = totalSellRevenue - bought;
+    const percent = bought ? Math.min(100, ((totalSellRevenue / bought) * 100).toFixed(1)) : 0;
 
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
       <b>Круг #${i + 1}</b><br>
-      Куплено: ${c.buyamount}₽<br>
-      Продано: ${sold.toFixed(2)}₽<br>
-      Выручка: ${revenue.toFixed(2)}₽<br>
-      PnL: ${pnl.toFixed(2)}₽<br>
+      Куплено: ${bought.toLocaleString()}₽<br>
+      Продано: ${totalSoldAsset.toLocaleString()} ${c.sells[0]?.currency || ''}<br>
+      Выручка: ${totalSellRevenue.toLocaleString()}₽<br>
+      PnL: ${pnl.toLocaleString()}₽<br>
       Выполнено: ${percent}%<br>
-      <ul>${c.sells.map(s => `<li>${s.amount} ${s.currency} по ${s.price}₽ — ${s.note}</li>`).join("")}</ul>
+      <ul>${c.sells.map(s =>
+        `<li>${parseFloat(s.amount).toLocaleString()} ${s.currency} по ${parseFloat(s.price).toLocaleString()}₽ — ${s.note || ''}</li>`
+      ).join("")}</ul>
       <button onclick="deleteCircle(${c.id})">Удалить</button>
     `;
     wrap.appendChild(card);
@@ -102,8 +119,10 @@ function drawChart() {
   if (chartInstance) chartInstance.destroy();
 
   const labels = circles.map((_, i) => `Круг #${i + 1}`);
-  const revenue = circles.map(c => c.sells.reduce((s, d) => s + d.amount * d.price, 0));
-  const pnl = revenue.map((r, i) => r - circles[i].buyamount);
+  const revenue = circles.map(c =>
+    c.sells.reduce((s, d) => s + parseFloat(d.amount) * parseFloat(d.price), 0)
+  );
+  const pnl = revenue.map((r, i) => r - parseFloat(circles[i].buyamount));
 
   chartInstance = new Chart(ctx, {
     type: "bar",
@@ -120,5 +139,16 @@ function drawChart() {
     }
   });
 }
+
+// табы
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.add("active");
+  });
+});
 
 loadCircles();
