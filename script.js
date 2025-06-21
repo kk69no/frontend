@@ -1,4 +1,4 @@
-const API = 'https://backend-2wm0.onrender.com'; // ЗАМЕНИ на свой Render API URL
+const API = 'https://your-backend.onrender.com'; // ЗАМЕНИ на свой Render API URL
 Telegram.WebApp.ready();
 const initData = Telegram.WebApp.initData;
 const initHeaders = { 'x-init-data': initData };
@@ -34,7 +34,6 @@ document.getElementById('deal-form').onsubmit = async (e) => {
     alert("Заполните все поля");
     return;
   }
-}
 
 if (type === "buy") {
   const res = await fetch(`${API}/circles`, {
@@ -67,6 +66,11 @@ if (type === "buy") {
   }
 }
 
+  }
+
+  ['amount','currency','price','note'].forEach(id => document.getElementById(id).value = '');
+  await loadCircles();
+};
 
 // Загрузка кругов
 async function loadCircles() {
