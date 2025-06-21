@@ -1,9 +1,12 @@
-console.log("initData:", Telegram.WebApp.initData);
-const API = 'https://backend-2wm0.onrender.com'; // ЗАМЕНИ на свой backend URL
+const API = 'https://backend-2wm0.onrender.com'; // Замени на свой backend, если нужно
 Telegram.WebApp.ready();
+
 const initData = Telegram.WebApp.initData;
+console.log("📦 initData:", initData);
+
 const initHeaders = { 'x-init-data': initData };
 let circles = [];
+let chartInstance = null;
 
 // Вкладки
 document.querySelectorAll('.tab').forEach(tab => {
@@ -19,7 +22,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.getElementById('ai-note').onclick = () => {
   const currency = document.getElementById("currency").value;
   const price = document.getElementById("price").value;
-  document.getElementById("note").value = `Продажа ${currency} по ${price}₽ – выгодно`;
+  document.getElementById("note").value = `Продажа ${currency} по ${price}₽ — возможно выгодно`;
 };
 
 // Отправка формы
@@ -66,7 +69,7 @@ document.getElementById('deal-form').onsubmit = async (e) => {
       }
     }
 
-    ['amount','currency','price','note'].forEach(id => document.getElementById(id).value = '');
+    ['amount', 'currency', 'price', 'note'].forEach(id => document.getElementById(id).value = '');
     await loadCircles();
   } catch (error) {
     alert("Ошибка запроса: " + error.message);
@@ -77,7 +80,8 @@ document.getElementById('deal-form').onsubmit = async (e) => {
 async function loadCircles() {
   const res = await fetch(`${API}/circles`, { headers: initHeaders });
   if (!res.ok) {
-    alert("Ошибка загрузки кругов: " + (await res.text()));
+    const msg = await res.text();
+    alert("Ошибка загрузки кругов: " + msg);
     return;
   }
   circles = await res.json();
@@ -111,7 +115,7 @@ function renderCircles() {
       Выручка: ${revenue.toFixed(2)}₽<br>
       PnL: ${pnl.toFixed(2)}₽<br>
       Выполнено: ${percent}%<br>
-      <ul>${c.sells.map(s => `<li>${s.amount} ${s.currency} по ${s.price}₽ – ${s.note}</li>`).join("")}</ul>
+      <ul>${c.sells.map(s => `<li>${s.amount} ${s.currency} по ${s.price}₽ — ${s.note}</li>`).join("")}</ul>
       <button onclick="deleteCircle(${c.id})">Удалить</button>
     `;
     wrap.appendChild(card);
@@ -125,20 +129,27 @@ async function deleteCircle(id) {
     headers: initHeaders
   });
   if (!res.ok) {
-    alert("Ошибка при удалении: " + (await res.text()));
+    const msg = await res.text();
+    alert("Ошибка удаления: " + msg);
     return;
   }
   await loadCircles();
 }
 
-// График Chart.js
+// Построение графика
 function drawChart() {
   const ctx = document.getElementById("mainChart").getContext("2d");
+
+  // Уничтожить предыдущий, если есть
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+
   const labels = circles.map((_, i) => `Круг #${i + 1}`);
   const revenue = circles.map(c => c.sells.reduce((s, d) => s + d.amount * d.price, 0));
   const pnl = revenue.map((r, i) => r - circles[i].buyamount);
 
-  new Chart(ctx, {
+  chartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -154,18 +165,19 @@ function drawChart() {
   });
 }
 
-// Загрузка логов
+// Загрузка логов (заглушка)
 async function loadLogs() {
   const res = await fetch(`${API}/logs`, { headers: initHeaders });
   const logs = await res.json();
   const ul = document.getElementById("logList");
-  ul.innerHTML = logs.map(l => `<li>${l.action} – ${new Date(l.created_at).toLocaleString()}</li>`).join('');
+  ul.innerHTML = logs.map(l => `<li>${l.action} — ${new Date(l.created_at).toLocaleString()}</li>`).join('');
 }
 
-// Применение фильтров (пока заглушка)
+// Фильтры — пока заглушка
 document.getElementById("applyFilter").onclick = () => {
-  alert("Фильтры пока не реализованы");
+  alert("Фильтрация будет в будущей версии");
 };
 
+// Старт
 loadCircles();
 loadLogs();
