@@ -2,72 +2,35 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>💱 Telegram P2P Сделки</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>P2P Круги</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <nav class="tabs">
-        <button class="tab active" data-tab="deals">📄 Сделки</button>
-        <button class="tab" data-tab="chart">📊 График</button>
-        <button class="tab" data-tab="filters">🔍 Фильтры</button>
-        <button class="tab" data-tab="logs">📝 Логи</button>
-      </nav>
-    </header>
+  <main>
+    <h1>P2P сделки</h1>
 
-    <main>
-      <!-- Вкладка: Сделки -->
-      <section class="tab-content active" id="tab-deals">
-        <h2>Добавить сделку</h2>
-        <form id="deal-form">
-          <select id="type">
-            <option value="buy">Покупка</option>
-            <option value="sell">Продажа</option>
-          </select>
+    <form id="deal-form">
+      <select id="type">
+        <option value="buy">Покупка</option>
+        <option value="sell">Продажа</option>
+      </select>
 
-          <input type="number" id="amount" placeholder="Сумма ₽" />
-          <input type="text" id="currency" placeholder="Валюта (например USDT)" />
-          <input type="number" id="price" placeholder="Цена ₽" />
-          <input type="text" id="note" placeholder="Примечание" />
+      <input type="number" id="amount" placeholder="Сумма" required />
+      <input type="text" id="currency" placeholder="Валюта (например, USDT)" />
+      <input type="number" id="price" placeholder="Цена за единицу" step="0.01" />
+      <input type="text" id="note" placeholder="Заметка" />
 
-          <div class="button-group">
-            <button type="button" id="ai-note">🤖 AI-подсказка</button>
-            <button type="submit">➕ Добавить сделку</button>
-          </div>
-        </form>
+      <select id="circleSelect"></select>
+      <button type="submit">Добавить сделку</button>
+    </form>
 
-        <h3>Круг для продажи</h3>
-        <select id="circleSelect"></select>
+    <canvas id="mainChart"></canvas>
 
-        <div id="circles" class="circle-list"></div>
-      </section>
-
-      <!-- Вкладка: График -->
-      <section class="tab-content" id="tab-chart">
-        <h2>📈 Аналитика</h2>
-        <canvas id="mainChart" height="200"></canvas>
-      </section>
-
-      <!-- Вкладка: Фильтры -->
-      <section class="tab-content" id="tab-filters">
-        <h2>🔍 Фильтры</h2>
-        <input id="filterCurrency" placeholder="Валюта" />
-        <input id="filterMinPrice" type="number" placeholder="Мин. цена" />
-        <input id="filterMaxPrice" type="number" placeholder="Макс. цена" />
-        <button id="applyFilter">Применить</button>
-      </section>
-
-      <!-- Вкладка: Логи -->
-      <section class="tab-content" id="tab-logs">
-        <h2>📝 История действий</h2>
-        <ul id="logList"></ul>
-      </section>
-    </main>
-  </div>
+    <section id="circles"></section>
+  </main>
 
   <script src="script.js"></script>
 </body>
