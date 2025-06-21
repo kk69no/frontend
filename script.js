@@ -35,27 +35,37 @@ document.getElementById('deal-form').onsubmit = async (e) => {
     return;
   }
 
-  if (type === "buy") {
-    await fetch(`${API}/circles`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...initHeaders },
-      body: JSON.stringify({ buyAmount: amount })
-    });
-  } else {
-    const sel = document.getElementById("circleSelect");
-    const selected = sel.selectedIndex;
-    const circle = circles[selected];
-    if (!circle) return alert("Нет выбранного круга");
-    await fetch(`${API}/circles/${circle.id}/sells`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...initHeaders },
-      body: JSON.stringify({ amount, currency, price, note })
-    });
-  }
+if (type === "buy") {
+  const res = await fetch(`${API}/circles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...initHeaders },
+    body: JSON.stringify({ buyAmount: amount })
+  });
 
-  ['amount','currency','price','note'].forEach(id => document.getElementById(id).value = '');
-  await loadCircles();
-};
+  if (!res.ok) {
+    const err = await res.text();
+    alert("Ошибка при создании круга: " + err);
+    return;
+  }
+} else {
+  const sel = document.getElementById("circleSelect");
+  const selected = sel.selectedIndex;
+  const circle = circles[selected];
+  if (!circle) return alert("Нет выбранного круга");
+
+  const res = await fetch(`${API}/circles/${circle.id}/sells`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...initHeaders },
+    body: JSON.stringify({ amount, currency, price, note })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    alert("Ошибка при добавлении сделки: " + err);
+    return;
+  }
+}
+
 
 // Загрузка кругов
 async function loadCircles() {
