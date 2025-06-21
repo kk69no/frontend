@@ -1,4 +1,4 @@
-const API = 'https://your-backend.onrender.com'; // ЗАМЕНИ на свой Render API URL
+const API = 'https://your-backend.onrender.com'; // ЗАМЕНИ на свой backend URL
 Telegram.WebApp.ready();
 const initData = Telegram.WebApp.initData;
 const initHeaders = { 'x-init-data': initData };
@@ -35,46 +35,50 @@ document.getElementById('deal-form').onsubmit = async (e) => {
     return;
   }
 
-if (type === "buy") {
-  const res = await fetch(`${API}/circles`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...initHeaders },
-    body: JSON.stringify({ buyAmount: amount })
-  });
+  try {
+    if (type === "buy") {
+      const res = await fetch(`${API}/circles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...initHeaders },
+        body: JSON.stringify({ buyAmount: amount })
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        alert("Ошибка при создании круга: " + err);
+        return;
+      }
+    } else {
+      const sel = document.getElementById("circleSelect");
+      const selected = sel.selectedIndex;
+      const circle = circles[selected];
+      if (!circle) return alert("Нет выбранного круга");
 
-  if (!res.ok) {
-    const err = await res.text();
-    alert("Ошибка при создании круга: " + err);
-    return;
+      const res = await fetch(`${API}/circles/${circle.id}/sells`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...initHeaders },
+        body: JSON.stringify({ amount, currency, price, note })
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        alert("Ошибка при добавлении сделки: " + err);
+        return;
+      }
+    }
+
+    ['amount','currency','price','note'].forEach(id => document.getElementById(id).value = '');
+    await loadCircles();
+  } catch (error) {
+    alert("Ошибка запроса: " + error.message);
   }
-} else {
-  const sel = document.getElementById("circleSelect");
-  const selected = sel.selectedIndex;
-  const circle = circles[selected];
-  if (!circle) return alert("Нет выбранного круга");
-
-  const res = await fetch(`${API}/circles/${circle.id}/sells`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...initHeaders },
-    body: JSON.stringify({ amount, currency, price, note })
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    alert("Ошибка при добавлении сделки: " + err);
-    return;
-  }
-}
-
-  }
-
-  ['amount','currency','price','note'].forEach(id => document.getElementById(id).value = '');
-  await loadCircles();
 };
 
 // Загрузка кругов
 async function loadCircles() {
   const res = await fetch(`${API}/circles`, { headers: initHeaders });
+  if (!res.ok) {
+    alert("Ошибка загрузки кругов: " + (await res.text()));
+    return;
+  }
   circles = await res.json();
   renderCircles();
   drawChart();
@@ -115,7 +119,14 @@ function renderCircles() {
 
 // Удалить круг
 async function deleteCircle(id) {
-  await fetch(`${API}/circles/${id}`, { method: "DELETE", headers: initHeaders });
+  const res = await fetch(`${API}/circles/${id}`, {
+    method: "DELETE",
+    headers: initHeaders
+  });
+  if (!res.ok) {
+    alert("Ошибка при удалении: " + (await res.text()));
+    return;
+  }
   await loadCircles();
 }
 
@@ -150,9 +161,9 @@ async function loadLogs() {
   ul.innerHTML = logs.map(l => `<li>${l.action} – ${new Date(l.created_at).toLocaleString()}</li>`).join('');
 }
 
-// Применение фильтров — пока просто перезагрузка
+// Применение фильтров (пока заглушка)
 document.getElementById("applyFilter").onclick = () => {
-  alert("Фильтры пока не подключены. Скоро будут!");
+  alert("Фильтры пока не реализованы");
 };
 
 loadCircles();
