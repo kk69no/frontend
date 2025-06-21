@@ -1,4 +1,4 @@
-const API = 'https://your-backend.onrender.com'; // ЗАМЕНИ на свой backend URL
+const API = 'https://backend-2wm0.onrender.com'; // ЗАМЕНИ на свой backend URL
 Telegram.WebApp.ready();
 const initData = Telegram.WebApp.initData;
 const initHeaders = { 'x-init-data': initData };
