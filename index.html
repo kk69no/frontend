@@ -14,26 +14,22 @@
       <button class="tab active" data-tab="deals">Сделки</button>
       <button class="tab" data-tab="analytics">Аналитика</button>
     </div>
-
     <div class="tab-content active" id="deals">
       <form id="deal-form">
         <select id="type">
           <option value="buy">Покупка</option>
           <option value="sell">Продажа</option>
         </select>
-
-        <input type="number" id="amount" placeholder="Сумма" required />
+        <input type="number" id="amount" placeholder="Сумма актива" required />
+        <input type="number" id="buyPrice" placeholder="Цена покупки ₽" step="0.01" />
         <input type="text" id="currency" placeholder="Валюта (например, USDT)" />
-        <input type="number" id="price" placeholder="Цена за единицу" step="0.01" />
+        <input type="number" id="price" placeholder="Цена продажи ₽" step="0.01" />
         <input type="text" id="note" placeholder="Заметка" />
-
         <select id="circleSelect"></select>
         <button type="submit">Добавить сделку</button>
       </form>
-
       <div class="circle-list" id="circles"></div>
     </div>
-
     <div class="tab-content" id="analytics">
       <canvas id="mainChart"></canvas>
     </div>
