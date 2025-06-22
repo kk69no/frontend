@@ -2,74 +2,482 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>💱 Telegram P2P Сделки</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>P2P Circles Tracker - Full Version</title>
+  <style>
+    /* --- Стили --- */
+    :root {
+      --bg: #f6f8fa;
+      --card: #fff;
+      --pri: #4f46e5;
+      --pri-dark: #4338ca;
+      --succ: #16a34a;
+      --warn: #f59e0b;
+      --danger: #dc2626;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", Arial, sans-serif;
+      background: var(--bg);
+      padding: 1rem;
+      color: #111827;
+      min-height: 100vh;
+    }
+    h1, h2, h3 {
+      color: var(--pri);
+      margin-bottom: 1rem;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: auto;
+      background: var(--card);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      margin-bottom: .3rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      padding: .75rem 1rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      border: 1.7px solid #d1d5db;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--pri);
+      box-shadow: 0 0 0 3px rgb(79 70 229 / 0.25);
+    }
+    button {
+      border: none;
+      background: var(--pri);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: .2s;
+    }
+    button:hover {
+      background: var(--pri-dark);
+    }
+    .flex {
+      display: flex;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .flex > button {
+      flex: 1;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 8px;
+      font-size: .75rem;
+      color: #fff;
+      margin-left: .25rem;
+    }
+    .pill.open {
+      background: var(--warn);
+    }
+    .pill.closed {
+      background: var(--succ);
+    }
+    .pill.error {
+      background: var(--danger);
+    }
+    progress {
+      width: 100%;
+      height: 14px;
+      border: none;
+      border-radius: 7px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    progress::-webkit-progress-bar {
+      background: #e5e7eb;
+    }
+    progress::-webkit-progress-value {
+      background: var(--pri);
+    }
+    ul {
+      margin: .4rem 0 0 1rem;
+      color: #374151;
+      font-size: .9rem;
+      max-height: 140px;
+      overflow-y: auto;
+      padding-left: 1rem;
+    }
+    ul li {
+      margin-bottom: 0.25rem;
+    }
+    .card {
+      margin-bottom: 1.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1rem;
+      background: #fff;
+    }
+    .delete-btn {
+      background: var(--danger);
+      margin-top: 1rem;
+      width: auto;
+      padding: 0.5rem 1rem;
+    }
+    .analytics-block {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-top: 2rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .error-msg {
+      color: var(--danger);
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <nav class="tabs">
-        <button class="tab active" data-tab="deals">📄 Сделки</button>
-        <button class="tab" data-tab="chart">📊 График</button>
-        <button class="tab" data-tab="filters">🔍 Фильтры</button>
-        <button class="tab" data-tab="logs">📝 Логи</button>
-      </nav>
-    </header>
+  <div class="wrap">
+    <h1>P2P Circles Tracker - Полная версия</h1>
 
-    <main>
-      <!-- Вкладка: Сделки -->
-      <section class="tab-content active" id="tab-deals">
-        <h2>Добавить сделку</h2>
-        <form id="deal-form">
-          <select id="type">
-            <option value="buy">Покупка</option>
-            <option value="sell">Продажа</option>
-          </select>
+    <!-- Выбор активного круга -->
+    <label for="circleSelect">Активный круг для продажи</label>
+    <select id="circleSelect" aria-label="Выбор активного круга"></select>
 
-          <input type="number" id="amount" placeholder="Сумма ₽" />
-          <input type="text" id="currency" placeholder="Валюта (например USDT)" />
-          <input type="number" id="price" placeholder="Цена ₽" />
-          <input type="text" id="note" placeholder="Примечание" />
+    <!-- Форма добавления сделки -->
+    <label for="type">Тип сделки</label>
+    <select id="type" aria-label="Тип сделки">
+      <option value="buy">Покупка — открыть новый круг</option>
+      <option value="sell">Продажа</option>
+    </select>
 
-          <div class="button-group">
-            <button type="button" id="ai-note">🤖 AI-подсказка</button>
-            <button type="submit">➕ Добавить сделку</button>
-          </div>
-        </form>
+    <label for="amount">Сумма операции (₽)</label>
+    <input id="amount" type="number" placeholder="Введите сумму в рублях" min="0" step="any" aria-label="Сумма операции в рублях"/>
 
-        <h3>Круг для продажи</h3>
-        <select id="circleSelect"></select>
+    <div class="flex">
+      <button type="button" data-add="1">+1</button>
+      <button type="button" data-add="10">+10</button>
+      <button type="button" data-add="100">+100</button>
+    </div>
 
-        <div id="circles" class="circle-list"></div>
-      </section>
+    <label for="currency">Валюта (например, USDT)</label>
+    <input id="currency" placeholder="Введите валюту" aria-label="Валюта сделки" />
 
-      <!-- Вкладка: График -->
-      <section class="tab-content" id="tab-chart">
-        <h2>📈 Аналитика</h2>
-        <canvas id="mainChart" height="200"></canvas>
-      </section>
+    <label for="price">Цена за 1 ед. (₽)</label>
+    <input id="price" type="number" placeholder="Введите цену" min="0" step="any" aria-label="Цена за единицу" />
 
-      <!-- Вкладка: Фильтры -->
-      <section class="tab-content" id="tab-filters">
-        <h2>🔍 Фильтры</h2>
-        <input id="filterCurrency" placeholder="Валюта" />
-        <input id="filterMinPrice" type="number" placeholder="Мин. цена" />
-        <input id="filterMaxPrice" type="number" placeholder="Макс. цена" />
-        <button id="applyFilter">Применить</button>
-      </section>
+    <label for="note">Примечание (биржа, платёжка и т.д.)</label>
+    <textarea id="note" placeholder="Введите примечание" aria-label="Примечание к сделке"></textarea>
 
-      <!-- Вкладка: Логи -->
-      <section class="tab-content" id="tab-logs">
-        <h2>📝 История действий</h2>
-        <ul id="logList"></ul>
-      </section>
-    </main>
+    <button id="addDeal" type="button">Добавить сделку</button>
+    <button id="export" type="button">📤 Экспорт в CSV</button>
+
+    <!-- Ошибки -->
+    <div id="errorMsg" class="error-msg" role="alert" aria-live="assertive"></div>
+
+    <!-- Карточки кругов -->
+    <div id="circles" style="margin-top: 2rem;"></div>
+
+    <!-- Аналитика -->
+    <div id="analytics" class="analytics-block" aria-live="polite"></div>
   </div>
 
-  <script src="script.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  // --- Переменные и константы ---
+  const STORAGE_KEY = 'p2p_circles_full_v1';
+  const circles = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const $ = id => document.getElementById(id);
+  const nf = n => Number(n) || 0;
+  const fmt = n => Number(n).toFixed(2);
+
+  // Генератор уникальных ID (UUID v4 упрощённый)
+  function generateId() {
+    return 'xxxx-xxxx-xxxx-xxxx'.replace(/[x]/g, () => (Math.floor(Math.random() * 16)).toString(16));
+  }
+
+  // --- Работа с ошибками ---
+  function showError(msg) {
+    const el = $('errorMsg');
+    el.textContent = msg;
+    if(msg) {
+      setTimeout(() => { el.textContent = ''; }, 4000);
+    }
+  }
+
+  // --- Сохраняем данные в localStorage ---
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(circles));
+  }
+
+  // --- Обновление селектора активных кругов ---
+  function refreshSelect() {
+    const sel = $('circleSelect');
+    sel.innerHTML = '';
+
+    const openCircles = circles.filter(c => !c.closed);
+
+    if (openCircles.length === 0) {
+      sel.disabled = true;
+      return;
+    }
+
+    sel.disabled = false;
+    openCircles.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `#${c.id} • Остаток: ${fmt(c.remainingQty)} ${c.currency}`;
+      sel.appendChild(opt);
+    });
+
+    // Если текущий выбранный id отсутствует, ставим первый
+    if (!Array.from(sel.options).some(opt => opt.value === sel.value)) {
+      sel.value = openCircles[0].id;
+    }
+  }
+
+  // --- Нахождение круга по ID ---
+  function findCircleById(id) {
+    return circles.find(c => c.id === id);
+  }
+
+  // --- Рассчёт профита и спреда для круга ---
+  function calculateCircleStats(c) {
+    // Себестоимость проданных единиц (кол-во * цена покупки)
+    const costOfSold = c.sellQty * c.buyPrice;
+    // Профит — разница между выручкой от продаж и себестоимостью
+    const profit = c.sellRub - costOfSold;
+    // Спред в процентах
+    const spread = costOfSold ? ((c.sellRub / costOfSold - 1) * 100) : 0;
+
+    return { profit, spread, costOfSold };
+  }
+
+  // --- Отрисовка всех кругов ---
+  function renderCircles() {
+    const wrap = $('circles');
+    wrap.innerHTML = '';
+
+    circles.forEach(c => {
+      const { profit, spread } = calculateCircleStats(c);
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      card.innerHTML = `
+        <strong>Круг #${c.id}</strong> 
+        <span class="pill ${c.closed ? 'closed' : 'open'}">${c.closed ? 'Закрыт' : 'Открыт'}</span><br>
+        <b>Валюта:</b> ${c.currency}<br>
+        <b>Куплено:</b> ${fmt(c.buyQty)} @ ${fmt(c.buyPrice)} ₽ (Итого: ${fmt(c.buyRub)} ₽)<br>
+        <b>Продано:</b> ${fmt(c.sellQty)} (Выручка: ${fmt(c.sellRub)} ₽)<br>
+        <b>Остаток:</b> ${fmt(c.remainingQty)} ${c.currency}<br>
+        <b>Профит:</b> ${fmt(profit)} ₽<br>
+        <b>Спред:</b> ${fmt(spread)} %<br>
+        <progress value="${c.sellRub}" max="${c.buyRub}"></progress>
+
+        <h3>Продажи:</h3>
+        <ul>
+          ${c.sells.length ? c.sells.map(s =>
+            `<li>${fmt(s.qty)} ${c.currency} @ ${fmt(s.price)} ₽ (${fmt(s.rub)} ₽) — ${s.note || 'без примечания'}</li>`
+          ).join('') : '<li>Продаж пока нет</li>'}
+        </ul>
+      `;
+
+      // Кнопка удаления только для закрытых кругов
+      if (c.closed) {
+        const btnDel = document.createElement('button');
+        btnDel.className = 'delete-btn';
+        btnDel.textContent = 'Удалить круг';
+        btnDel.onclick = () => {
+          if (confirm(`Удалить круг #${c.id}? Все данные будут потеряны.`)) {
+            const idx = circles.findIndex(x => x.id === c.id);
+            if (idx !== -1) {
+              circles.splice(idx, 1);
+              saveData();
+              render();
+            }
+          }
+        };
+        card.appendChild(btnDel);
+      }
+
+      wrap.appendChild(card);
+    });
+  }
+
+  // --- Отрисовка аналитики по всем кругам ---
+  function renderAnalytics() {
+    const analytics = $('analytics');
+
+    if (circles.length === 0) {
+      analytics.innerHTML = '<h2>Аналитика</h2><p>Кругов пока нет.</p>';
+      return;
+    }
+
+    const totalBuyRub = circles.reduce((acc, c) => acc + c.buyRub, 0);
+    const totalSellRub = circles.reduce((acc, c) => acc + c.sellRub, 0);
+    const totalProfit = totalSellRub - circles.reduce((acc, c) => acc + (c.sellQty * c.buyPrice), 0);
+    const openCount = circles.filter(c => !c.closed).length;
+    const closedCount = circles.length - openCount;
+
+    analytics.innerHTML = `
+      <h2>Аналитика</h2>
+      <p>Всего кругов: <strong>${circles.length}</strong></p>
+      <p>Открытых: <strong>${openCount}</strong>, Закрытых: <strong>${closedCount}</strong></p>
+      <p>Общая сумма покупок: <strong>${fmt(totalBuyRub)} ₽</strong></p>
+      <p>Общая сумма продаж: <strong>${fmt(totalSellRub)} ₽</strong></p>
+      <p>Общий профит: <strong>${fmt(totalProfit)} ₽</strong></p>
+    `;
+  }
+
+  // --- Общий рендер ---
+  function render() {
+    refreshSelect();
+    renderCircles();
+    renderAnalytics();
+  }
+
+  // --- Добавление сделки ---
+  $('addDeal').onclick = () => {
+    const type = $('type').value;
+    const rub = nf($('amount').value);
+    const cur = $('currency').value.trim().toUpperCase();
+    const price = nf($('price').value);
+    const note = $('note').value.trim();
+
+    // Проверки
+    if (!rub || !price || !cur) {
+      showError('Заполните все обязательные поля: сумма, валюта, цена.');
+      return;
+    }
+    if (type === 'buy') {
+      // Новый круг
+      // Проверяем нет ли уже открытого круга с такой же валютой (можно менять логику, если надо)
+      const newId = generateId();
+      const qty = rub / price;
+      circles.push({
+        id: newId,
+        currency: cur,
+        buyRub: rub,
+        buyPrice: price,
+        buyQty: qty,
+        remainingQty: qty,
+        sellQty: 0,
+        sellRub: 0,
+        sells: [],
+        closed: false
+      });
+      showError('');
+    } else if (type === 'sell') {
+      // Продажа
+      if ($('circleSelect').disabled) {
+        showError('Нет активных кругов для продажи.');
+        return;
+      }
+      const selectedId = $('circleSelect').value;
+      const c = findCircleById(selectedId);
+      if (!c) {
+        showError('Выбранный круг не найден.');
+        return;
+      }
+      if (c.closed) {
+        showError('Выбранный круг уже закрыт.');
+        return;
+      }
+      if (cur !== c.currency) {
+        showError('Валюта продажи не совпадает с валютой круга.');
+        return;
+      }
+      const qty = rub / price;
+      if (qty > c.remainingQty + 1e-9) { // маленький запас для точности float
+        showError('Превышен остаток валюты в круге.');
+        return;
+      }
+
+      // Добавляем продажу
+      c.sells.push({ qty, price, rub, note });
+      c.remainingQty -= qty;
+      c.sellQty += qty;
+      c.sellRub += rub;
+
+      // Если остаток <= 0, закрываем круг
+      if (c.remainingQty <= 1e-9) {
+        c.closed = true;
+        c.remainingQty = 0;
+      }
+      showError('');
+    } else {
+      showError('Неизвестный тип сделки.');
+      return;
+    }
+
+    // Очистка формы
+    ['amount', 'currency', 'price', 'note'].forEach(id => $(id).value = '');
+    render();
+  };
+
+  // --- Кнопки +N для суммы ---
+  document.querySelectorAll('[data-add]').forEach(btn => {
+    btn.onclick = () => {
+      const val = nf($('amount').value);
+      const add = nf(btn.dataset.add);
+      $('amount').value = (val + add).toFixed(2);
+    };
+  });
+
+  // --- Экспорт CSV ---
+  $('export').onclick = () => {
+    if (circles.length === 0) {
+      showError('Нет данных для экспорта.');
+      return;
+    }
+
+    let csv = 'Круг ID,Валюта,Тип сделки,Количество,Цена (₽),Сумма (₽),Примечание,Статус круга\n';
+
+    circles.forEach(c => {
+      // Покупка круга
+      csv += `${c.id},${c.currency},Покупка,${fmt(c.buyQty)},${fmt(c.buyPrice)},${fmt(c.buyRub)},,${c.closed ? 'Закрыт' : 'Открыт'}\n`;
+      // Продажи
+      c.sells.forEach(s => {
+        csv += `${c.id},${c.currency},Продажа,${fmt(s.qty)},${fmt(s.price)},${fmt(s.rub)},${s.note || ''},${c.closed ? 'Закрыт' : 'Открыт'}\n`;
+      });
+    });
+
+    // Создаём ссылку и кликаем для скачивания
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'p2p_circles_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
+
+  // --- Инициализация ---
+  render();
+
+})();
+</script>
 </body>
 </html>
